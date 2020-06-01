@@ -6,6 +6,8 @@ COLORS = [
 	(128, 0, 0),
 	(0, 128, 0),
 	(245, 179, 66),
+	(0, 0, 0),
+	(57, 81, 82),
 	()
 ]
 
@@ -59,7 +61,7 @@ class Cover:
 
 class Wall:
 
-	def __init__(self, display, position, color=(57, 81, 82), width=10, height=40, horizontal=1, parent=None):
+	def __init__(self, display, position, color=COLORS[4], width=10, height=40, horizontal=1, parent=None):
 		self.display = display
 		self.position = position
 		self.color = color

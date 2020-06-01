@@ -19,11 +19,22 @@ class Cell:
 		self.lower_wall = Wall(self.display, (self.PxlPosition[0], self.PxlPosition[1] + (self.unit * 7)), width=self.unit, height=self.side, parent=self)
 		self.right_wall = Wall(self.display, (self.PxlPosition[0] + (self.unit * 7), self.PxlPosition[1]), width=self.unit, height=self.side, horizontal=0, parent=self)
 		self.left_wall = Wall(self.display, self.PxlPosition, width=self.unit, height=self.side, horizontal=0, parent=self)
-		self.neighbors = [None, None, None, None]
+		self._neighbors = []
 		self.available = True
 		self.role = None
 		self.end = None
 		self.start = None
+		self.parent = None
+		self._g = None
+		self._h = None
+		self._f = None
+
+	def __repr__(self):
+		return str(self.position)
+
+	@property
+	def neighbors(self):
+		return [n for n in self._neighbors if n is not None and n.role != 3 and n.available]
 
 	def connect_with_neighbors(self, cell_list):
 		for direction in DIRECTIONS:
@@ -77,8 +88,8 @@ class Cell:
 			merge_walls(neighbor.left_wall, self.right_wall)
 		else:
 			raise Exception(f"The Cell at the position {neighbor.position} can not be a neighbor of the Cell at {self.position}")
-
-		self.neighbors[direction] = neighbor
+		
+		self._neighbors.append(neighbor)
 
 	def is_touched(self):
 		mpos = pygame.mouse.get_pos()
@@ -91,7 +102,6 @@ class Cell:
 
 	def use(self):
 		self.available = False
-		self.color = (255, 255, 0)
 
 	def unuse(self):
 		self.available = False
@@ -101,24 +111,48 @@ class Cell:
 		self.color = (255, 0, 0)
 
 	def f_cost(self):
-		return f(self.position, self.start, self.end)
+		if self._f is not None:
+			return self._f
+		if self.start is None or self.end is None:
+			raise Exception(f"There is no assigned start or end cell for the cell at {self.position}")
+		return f(self.position, self.start.position, self.end.position)
 
 	def g_cost(self):
-		return g(self.position, self.start)
+		if self._g is not None:
+			return self._g
+		if self.start is None:
+			raise Exception(f"There is no assigned start cell for the cell at {self.position}")
+		return g(self.position, self.start.position)
 
 	def h_cost(self):
-		return g(self.position, self.end)
+		if self._h is not None:
+			return self._h
+		if self.end is None:
+			raise Exception(f"There is no assigned end cell for the cell at {self.position}")
+		return g(self.position, self.end.position)
 	
 	@property 
 	def best_neighbor(self):
-		costs_list = [(neighbor, neighbor.f_cost(), neighbor.g_cost(), neighbor.h_cost()) for neighbor in self.neighbors if neighbor is not None] 
+		for neighbor in self.neighbors:
+			neighbor.color = (0, 255, 0)
+
+		self.color = (255, 0, 0)
+		self.use()
+		costs_list = [(neighbor, neighbor.f_cost(), neighbor.g_cost(), neighbor.h_cost()) for neighbor in self.neighbors if neighbor is not None and neighbor.available and neighbor.role != 3] 
+		if len(costs_list) == 0:
+			return None
 		costs_list = sorted(costs_list, key=lambda x: x[1])
 		b = costs_list[0]
 		repeats = [cost[1] for cost in costs_list].count(b[1])
 		if repeats ==  1:
+			b[0].use()
 			return b[0]
 		else:
+			costs_list = costs_list[:repeats]
 			costs_list = sorted(costs_list, key=lambda x: x[3])
+			costs_list[0][0].use()
+			return costs_list[0][0]
+
 
 
 def main():
